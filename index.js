@@ -1,7 +1,7 @@
 import worker from './worker.js';
 
 const port = process.env.PORT || 3000;
-console.log(`🚀 IPTV Proxy Server is running on port ${port}...`);
+console.log(`🚀 Server is running on port ${port}...`);
 
 export default {
     port: port,
