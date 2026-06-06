@@ -1,0 +1,56 @@
+name: Build and Publish Docker Image to GHCR
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # 允许手动在 GitHub 页面点击运行
+
+env:
+  # 使用点号语法的环境变量，指向 GitHub 的容器镜像库
+  REGISTRY: ghcr.io
+  # 镜像名称默认使用 github_用户名/仓库名
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    
+    # 设置必要的权限以便将镜像推送到 GitHub Packages
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN 是自动生成的，无需手动在 secrets 里配置
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # 开启缓存加速后续构建
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
